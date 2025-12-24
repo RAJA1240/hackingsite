@@ -1,0 +1,906 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RAJA MODS // ROOT_ACCESS</title>
+    <!-- Fonts for Hacker Look -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@300;400;500;700&family=VT323&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            --primary-color: #0f0; /* Classic Green */
+            --secondary-color: #003300; /* Dark Green */
+            --accent-color: #ff9900; /* Orange for RAJA MODS theme */
+            --danger-color: #f00; /* Red */
+            --bg-color: #050505;
+            --panel-bg: rgba(0, 20, 0, 0.85);
+            --font-main: 'Fira Code', monospace;
+            --font-display: 'VT323', monospace;
+            --scanline-color: rgba(255, 153, 0, 0.05);
+        }
+
+        * {
+            box-sizing: border-box;
+            scrollbar-width: thin;
+            scrollbar-color: var(--primary-color) var(--secondary-color);
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: var(--bg-color);
+            color: var(--primary-color);
+            font-family: var(--font-main);
+            overflow: hidden; /* App like feel */
+            height: 100vh;
+            width: 100vw;
+            text-transform: uppercase;
+        }
+
+        /* --- CRT EFFECTS --- */
+        .crt-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06));
+            background-size: 100% 2px, 3px 100%;
+            pointer-events: none;
+            z-index: 9999;
+            animation: flicker 0.15s infinite;
+        }
+
+        @keyframes flicker {
+            0% { opacity: 0.97; }
+            50% { opacity: 1; }
+            100% { opacity: 0.98; }
+        }
+
+        /* --- LAYOUT --- */
+        .app-container {
+            display: grid;
+            grid-template-columns: 250px 1fr 300px;
+            grid-template-rows: 60px 1fr 200px;
+            height: 100vh;
+            gap: 10px;
+            padding: 10px;
+        }
+
+        /* --- HEADER --- */
+        header {
+            grid-column: 1 / -1;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 2px solid var(--accent-color);
+            padding: 0 20px;
+            background: var(--panel-bg);
+            box-shadow: 0 0 15px var(--accent-color);
+        }
+
+        .logo {
+            font-family: var(--font-display);
+            font-size: 2rem;
+            letter-spacing: 2px;
+            text-shadow: 0 0 5px var(--accent-color);
+            animation: glitch 1s infinite alternate-reverse;
+            color: var(--accent-color);
+        }
+
+        .system-status {
+            display: flex;
+            gap: 20px;
+            font-size: 0.9rem;
+        }
+
+        .status-item span {
+            color: var(--accent-color);
+            font-weight: bold;
+        }
+
+        /* --- SIDEBAR NAV --- */
+        .sidebar {
+            grid-row: 2 / -1;
+            background: var(--panel-bg);
+            border: 1px solid var(--accent-color);
+            display: flex;
+            flex-direction: column;
+            padding: 10px;
+        }
+
+        .nav-btn {
+            background: transparent;
+            border: 1px solid transparent;
+            color: var(--primary-color);
+            padding: 15px;
+            text-align: left;
+            font-family: var(--font-main);
+            cursor: pointer;
+            margin-bottom: 5px;
+            transition: 0.3s;
+            text-transform: uppercase;
+            font-weight: bold;
+        }
+
+        .nav-btn:hover, .nav-btn.active {
+            background: var(--accent-color);
+            color: var(--bg-color);
+            box-shadow: 0 0 10px var(--accent-color);
+        }
+
+        .nav-btn::before {
+            content: '> ';
+            opacity: 0;
+        }
+        .nav-btn:hover::before, .nav-btn.active::before {
+            opacity: 1;
+        }
+
+        /* --- MAIN CONTENT AREA --- */
+        .main-display {
+            grid-column: 2;
+            grid-row: 2;
+            border: 1px solid var(--accent-color);
+            background: rgba(0, 10, 0, 0.9);
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        /* Views */
+        .view-section {
+            display: none;
+            width: 100%;
+            height: 100%;
+            padding: 20px;
+            overflow-y: auto;
+        }
+        
+        .view-section.active {
+            display: block;
+        }
+
+        /* Terminal Specifics */
+        #terminal-output {
+            font-size: 1rem;
+            line-height: 1.5;
+            color: #ccc;
+        }
+        .command-line { color: var(--accent-color); }
+        .success { color: var(--primary-color); }
+        .error { color: var(--danger-color); }
+        
+        .input-area {
+            display: flex;
+            margin-top: 10px;
+            border-top: 1px solid #333;
+            padding-top: 10px;
+        }
+        
+        .prompt { color: var(--accent-color); margin-right: 10px; font-weight: bold; }
+        
+        #cmd-input {
+            background: transparent;
+            border: none;
+            color: var(--accent-color);
+            font-family: var(--font-main);
+            font-size: 1rem;
+            width: 100%;
+            outline: none;
+        }
+
+        /* Dashboard Grid */
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+            height: 100%;
+        }
+
+        .dash-card {
+            border: 1px solid var(--accent-color);
+            padding: 15px;
+            background: rgba(20, 10, 0, 0.2);
+            position: relative;
+        }
+
+        .dash-card h3 {
+            margin-top: 0;
+            border-bottom: 1px dashed var(--accent-color);
+            padding-bottom: 5px;
+            font-size: 1.2rem;
+            color: var(--accent-color);
+        }
+
+        /* Network Canvas */
+        #networkCanvas {
+            width: 100%;
+            height: 100%;
+            background: #000;
+        }
+
+        /* --- BOTTOM PANEL (CONSOLE & MINER) --- */
+        .bottom-panel {
+            grid-column: 2;
+            grid-row: 3;
+            border: 1px solid var(--accent-color);
+            background: var(--panel-bg);
+            padding: 10px;
+            display: flex;
+            gap: 10px;
+        }
+
+        .log-console {
+            flex: 1;
+            border-right: 1px dashed var(--accent-color);
+            padding-right: 10px;
+            overflow-y: hidden;
+            font-size: 0.8rem;
+            font-family: var(--font-display);
+        }
+        
+        .log-entry {
+            margin-bottom: 4px;
+        }
+        .log-time { color: #666; margin-right: 5px; }
+
+        .miner-module {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .miner-stats {
+            width: 100%;
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 10px;
+        }
+
+        .hash-rate {
+            font-size: 2rem;
+            font-weight: bold;
+            color: var(--accent-color);
+            text-shadow: 0 0 5px var(--accent-color);
+        }
+
+        /* --- RIGHT SIDEBAR (WIDGETS) --- */
+        .widgets-panel {
+            grid-column: 3;
+            grid-row: 2 / -1;
+            background: var(--panel-bg);
+            border: 1px solid var(--accent-color);
+            display: flex;
+            flex-direction: column;
+            padding: 10px;
+            gap: 15px;
+        }
+
+        .widget {
+            border: 1px solid var(--secondary-color);
+            background: rgba(0,0,0,0.3);
+            padding: 10px;
+        }
+
+        .widget h4 { margin: 0 0 10px 0; font-size: 1rem; color: var(--accent-color); }
+
+        .progress-bar {
+            height: 10px;
+            background: #222;
+            margin-bottom: 5px;
+            position: relative;
+        }
+        
+        .progress-fill {
+            height: 100%;
+            background: var(--accent-color);
+            width: 0%;
+            transition: width 0.2s;
+            box-shadow: 0 0 5px var(--accent-color);
+        }
+
+        .cpu-row { margin-bottom: 8px; }
+        
+        /* Button Styles */
+        .action-btn {
+            background: #000;
+            border: 1px solid var(--danger-color);
+            color: var(--danger-color);
+            padding: 5px 10px;
+            cursor: pointer;
+            font-family: var(--font-main);
+            text-transform: uppercase;
+            font-size: 0.8rem;
+            width: 100%;
+            margin-top: 5px;
+            transition: 0.3s;
+        }
+        
+        .action-btn:hover {
+            background: var(--danger-color);
+            color: #000;
+            box-shadow: 0 0 10px var(--danger-color);
+        }
+
+        /* Responsive */
+        @media (max-width: 1000px) {
+            .app-container {
+                grid-template-columns: 200px 1fr;
+                grid-template-rows: 60px 1fr 150px;
+            }
+            .widgets-panel { display: none; } /* Hide widgets on small screens */
+        }
+        @media (max-width: 768px) {
+            .app-container {
+                display: flex;
+                flex-direction: column;
+                height: auto;
+                overflow-y: auto;
+            }
+            .sidebar { height: 50px; flex-direction: row; overflow-x: auto; }
+            .nav-btn { padding: 10px; margin: 0 5px; white-space: nowrap; }
+            .main-display { height: 400px; }
+            .bottom-panel { height: 200px; flex-direction: column; }
+            .log-console { border-right: none; border-bottom: 1px dashed var(--accent-color); }
+        }
+
+        /* Glitch Animation Keyframes */
+        @keyframes glitch {
+            0% { transform: translate(0) }
+            20% { transform: translate(-2px, 2px) }
+            40% { transform: translate(-2px, -2px) }
+            60% { transform: translate(2px, 2px) }
+            80% { transform: translate(2px, -2px) }
+            100% { transform: translate(0) }
+        }
+
+        .hidden { display: none !important; }
+
+    </style>
+</head>
+<body>
+
+    <!-- CRT Overlay -->
+    <div class="crt-overlay"></div>
+
+    <!-- Notification Container -->
+    <div id="toast-container" style="position: fixed; top: 70px; right: 20px; z-index: 1000; display: flex; flex-direction: column; gap: 10px;"></div>
+
+    <div class="app-container">
+        <!-- HEADER -->
+        <header>
+            <div class="logo">RAJA<span style="color:var(--primary-color)">MODS</span>_V1.0</div>
+            <div class="system-status">
+                <div class="status-item">USER: <span>RAJA_ADMIN</span></div>
+                <div class="status-item">IP: <span id="fake-ip">192.168.X.X</span></div>
+                <div class="status-item">UPTIME: <span id="uptime">00:00:00</span></div>
+            </div>
+        </header>
+
+        <!-- SIDEBAR -->
+        <nav class="sidebar">
+            <button class="nav-btn active" onclick="switchTab('terminal')">Terminal</button>
+            <button class="nav-btn" onclick="switchTab('dashboard')">Dashboard</button>
+            <button class="nav-btn" onclick="switchTab('network')">Net_Map</button>
+            <button class="nav-btn" onclick="switchTab('files')">File_Sys</button>
+            <button class="nav-btn" onclick="initHackSequence()">RAJA_HACK</button>
+        </nav>
+
+        <!-- MAIN DISPLAY -->
+        <main class="main-display">
+            
+            <!-- TERMINAL TAB -->
+            <section id="terminal" class="view-section active">
+                <div id="terminal-output">
+                    <div class="success">WELCOME TO RAJA MODS OS v1.0</div>
+                    <div>Type 'help' to see available commands.</div>
+                    <br>
+                </div>
+                <div class="input-area">
+                    <span class="prompt">raja@rajamods:~#</span>
+                    <input type="text" id="cmd-input" autocomplete="off" spellcheck="false" autofocus>
+                </div>
+            </section>
+
+            <!-- DASHBOARD TAB -->
+            <section id="dashboard" class="view-section">
+                <div class="dashboard-grid">
+                    <div class="dash-card">
+                        <h3>System Integrity</h3>
+                        <div style="font-size: 3rem; color: var(--danger-color); font-weight: bold;">RAJA_SECURED</div>
+                        <div>Firewall: <span style="color:var(--accent-color)">ACTIVE</span></div>
+                        <div>Proxy: <span style="color:var(--primary-color)">ACTIVE (7 NODES)</span></div>
+                    </div>
+                    <div class="dash-card">
+                        <h3>Target Acquisition</h3>
+                        <div id="target-list" style="height: 100px; overflow-y: scroll; font-size: 0.8rem;">
+                            <!-- Populated by JS -->
+                        </div>
+                        <button class="action-btn" style="width: auto;" onclick="findNewTarget()">SCAN_SUBNET</button>
+                    </div>
+                    <div class="dash-card" style="grid-column: span 2;">
+                        <h3>Active Modules</h3>
+                        <div style="display: flex; gap: 20px;">
+                            <div><span style="color:var(--accent-color)">[Running]</span> Keylogger</div>
+                            <div><span style="color:var(--accent-color)">[Running]</span> Packet Sniffer</div>
+                            <div><span style="color:#f00">[Idle]</span> Brute_Force</div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- NETWORK TAB -->
+            <section id="network" class="view-section" style="padding: 0;">
+                <canvas id="networkCanvas"></canvas>
+            </section>
+
+            <!-- FILES TAB -->
+            <section id="files" class="view-section">
+                <div class="dash-card">
+                    <h3>Encrypted Archives</h3>
+                    <table style="width: 100%; text-align: left; border-collapse: collapse;">
+                        <thead>
+                            <tr style="border-bottom: 1px solid var(--accent-color);">
+                                <th>Filename</th>
+                                <th>Size</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="file-list">
+                            <!-- JS Populated -->
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+        </main>
+
+        <!-- BOTTOM PANEL -->
+        <section class="bottom-panel">
+            <div class="log-console" id="sys-log">
+                <div class="log-entry"><span class="log-time">[00:00:01]</span> RAJA MODS initialized.</div>
+            </div>
+            <div class="miner-module">
+                <div class="miner-stats">
+                    <span>HASH_RATE:</span>
+                    <span class="hash-rate" id="hash-val">0.00 MH/s</span>
+                </div>
+                <div class="progress-bar">
+                    <div class="progress-fill" id="miner-progress"></div>
+                </div>
+                <div style="font-size: 0.8rem; margin-top: 5px;">WALLET: RAJA_0x3A...9F21</div>
+                <button class="action-btn" id="miner-btn" onclick="toggleMiner()">START_MINER</button>
+            </div>
+        </section>
+
+        <!-- WIDGETS -->
+        <aside class="widgets-panel">
+            <div class="widget">
+                <h4>CPU LOAD</h4>
+                <div class="cpu-row">
+                    <div>Core 01</div>
+                    <div class="progress-bar"><div class="progress-fill" style="width: 45%"></div></div>
+                </div>
+                <div class="cpu-row">
+                    <div>Core 02</div>
+                    <div class="progress-bar"><div class="progress-fill" style="width: 62%"></div></div>
+                </div>
+                <div class="cpu-row">
+                    <div>Core 03</div>
+                    <div class="progress-bar"><div class="progress-fill" style="width: 30%"></div></div>
+                </div>
+            </div>
+
+            <div class="widget">
+                <h4>MEMORY</h4>
+                <div>RAM USAGE: 12.4GB / 16GB</div>
+                <div class="progress-bar" style="margin-top:5px;">
+                    <div class="progress-fill" style="width: 78%; background: var(--accent-color);"></div>
+                </div>
+            </div>
+
+            <div class="widget">
+                <h4>THREAT LEVEL</h4>
+                <div id="threat-level" style="font-size: 2rem; text-align: center; font-weight: bold; color: #0f0;">LOW</div>
+            </div>
+
+            <button class="action-btn" onclick="purgeSystem()">PURGE_LOGS</button>
+            <button class="action-btn" style="border-color: var(--accent-color); color: var(--accent-color);" onclick="downloadData()">EXFILTRATE</button>
+        </aside>
+
+    </div>
+
+    <script>
+        /* --- GLOBAL VARIABLES --- */
+        let minerActive = false;
+        let hashCount = 0;
+        let uptimeSeconds = 0;
+        let hackingSequenceActive = false;
+
+        /* --- INITIALIZATION --- */
+        window.onload = function() {
+            generateFakeIP();
+            startUptime();
+            initFiles();
+            initTargets();
+            initNetworkCanvas();
+            setInterval(updateCPU, 2000);
+            setInterval(randomLog, 4000);
+            
+            // Terminal Input Listener
+            document.getElementById('cmd-input').addEventListener('keypress', function (e) {
+                if (e.key === 'Enter') {
+                    handleCommand(this.value);
+                    this.value = '';
+                }
+            });
+
+            // Focus input on click anywhere in terminal
+            document.getElementById('terminal').addEventListener('click', () => {
+                document.getElementById('cmd-input').focus();
+            });
+        };
+
+        /* --- NAVIGATION --- */
+        function switchTab(tabId) {
+            // Remove active class from buttons
+            document.querySelectorAll('.nav-btn').forEach(btn => btn.classList.remove('active'));
+            // Find the button that triggered this (imperfect but works for simple setup)
+            const btns = document.querySelectorAll('.nav-btn');
+            if(tabId === 'terminal') btns[0].classList.add('active');
+            if(tabId === 'dashboard') btns[1].classList.add('active');
+            if(tabId === 'network') btns[2].classList.add('active');
+            if(tabId === 'files') btns[3].classList.add('active');
+
+            // Hide all sections
+            document.querySelectorAll('.view-section').forEach(sec => sec.classList.remove('active'));
+            // Show target
+            document.getElementById(tabId).classList.add('active');
+
+            if(tabId === 'network') resizeCanvas();
+        }
+
+        /* --- TERMINAL LOGIC --- */
+        function handleCommand(cmd) {
+            const output = document.getElementById('terminal-output');
+            const inputLine = document.createElement('div');
+            inputLine.innerHTML = `<span class="prompt">raja@rajamods:~#</span> ${cmd}`;
+            output.appendChild(inputLine);
+
+            const response = document.createElement('div');
+            response.classList.add('response');
+            
+            const cleanCmd = cmd.trim().toLowerCase();
+
+            switch(cleanCmd) {
+                case 'help':
+                    response.innerHTML = `
+                        <div class="success">AVAILABLE COMMANDS:</div>
+                        <div>- help : Show this list</div>
+                        <div>- clear : Clear terminal</div>
+                        <div>- date : Show system date</div>
+                        <div>- hack : Initiate RAJA hack sequence</div>
+                        <div>- whoami : Current user info</div>
+                        <div>- status : System status report</div>
+                        <div>- raja : Display RAJA MODS info</div>
+                    `;
+                    break;
+                case 'clear':
+                    output.innerHTML = '';
+                    return; // Don't append response
+                case 'date':
+                    response.innerHTML = `<span style="color:var(--accent-color)">${new Date().toString()}</span>`;
+                    break;
+                case 'whoami':
+                    response.innerHTML = `<span style="color:var(--danger-color)">USER: RAJA_ADMIN | PRIVILEGES: ROOT</span>`;
+                    break;
+                case 'status':
+                    response.innerHTML = `<div>CPU: 45% | RAM: 78% | NET: RAJA_SECURE</div>`;
+                    break;
+                case 'hack':
+                    initHackSequence();
+                    response.innerHTML = `<span class="success">INITIATING RAJA HACK SEQUENCE...</span>`;
+                    break;
+                case 'raja':
+                    response.innerHTML = `<span style="color:var(--accent-color)">RAJA MODS v1.0 - ULTIMATE HACKING SUITE</span><div>Developed by Raja Team | All rights reserved</div>`;
+                    break;
+                case '':
+                    break;
+                default:
+                    response.innerHTML = `<span class="error">Command not found: ${cleanCmd}</span>`;
+                    response.innerHTML += `<div>Type 'help' for options.</div>`;
+            }
+
+            if(cleanCmd !== '') output.appendChild(response);
+            // Scroll to bottom
+            output.scrollTop = output.scrollHeight;
+        }
+
+        /* --- DASHBOARD & LOGIC --- */
+        function generateFakeIP() {
+            const ip = `${Math.floor(Math.random()*255)}.${Math.floor(Math.random()*255)}.${Math.floor(Math.random()*255)}.${Math.floor(Math.random()*255)}`;
+            document.getElementById('fake-ip').innerText = ip;
+        }
+
+        function startUptime() {
+            setInterval(() => {
+                uptimeSeconds++;
+                const h = Math.floor(uptimeSeconds / 3600).toString().padStart(2, '0');
+                const m = Math.floor((uptimeSeconds % 3600) / 60).toString().padStart(2, '0');
+                const s = (uptimeSeconds % 60).toString().padStart(2, '0');
+                document.getElementById('uptime').innerText = `${h}:${m}:${s}`;
+            }, 1000);
+        }
+
+        function updateCPU() {
+            const bars = document.querySelectorAll('.cpu-row .progress-fill');
+            bars.forEach(bar => {
+                const w = Math.floor(Math.random() * 90) + 10;
+                bar.style.width = w + '%';
+                // Color change based on load
+                if(w > 80) bar.style.background = 'var(--danger-color)';
+                else bar.style.background = 'var(--accent-color)';
+            });
+        }
+
+        function addToLog(msg, type = 'info') {
+            const logContainer = document.getElementById('sys-log');
+            const time = document.getElementById('uptime').innerText;
+            const entry = document.createElement('div');
+            entry.className = 'log-entry';
+            
+            let color = '#ccc';
+            if(type === 'error') color = 'var(--danger-color)';
+            if(type === 'success') color = 'var(--primary-color)';
+            if(type === 'warn') color = 'var(--accent-color)';
+
+            entry.innerHTML = `<span class="log-time">[${time}]</span> <span style="color:${color}">${msg}</span>`;
+            logContainer.prepend(entry); // Add to top
+            
+            // Limit log entries
+            if(logContainer.children.length > 20) {
+                logContainer.removeChild(logContainer.lastChild);
+            }
+        }
+
+        function randomLog() {
+            if(Math.random() > 0.7) {
+                const msgs = [
+                    "RAJA MODS packet sniffed on port 8080",
+                    "RAJA handshake successful with Node 4",
+                    "Encrypted payload received",
+                    "Ping request timed out (192.168.1.55)",
+                    "Updating RAJA DNS cache...",
+                    "Scanning ports 21-22...",
+                    "RAJA Firewall blocked intrusion attempt",
+                    "RAJA MODS encryption active"
+                ];
+                const msg = msgs[Math.floor(Math.random() * msgs.length)];
+                addToLog(msg, 'info');
+            }
+        }
+
+        /* --- MINER LOGIC --- */
+        function toggleMiner() {
+            const btn = document.getElementById('miner-btn');
+            minerActive = !minerActive;
+            
+            if(minerActive) {
+                btn.innerText = "STOP_MINER";
+                btn.style.borderColor = "var(--danger-color)";
+                btn.style.color = "var(--danger-color)";
+                addToLog("RAJA Miner process started.", "success");
+                runMiner();
+            } else {
+                btn.innerText = "START_MINER";
+                btn.style.borderColor = "var(--danger-color)";
+                btn.style.color = "var(--danger-color)";
+                addToLog("RAJA Miner process halted.", "warn");
+            }
+        }
+
+        function runMiner() {
+            if(!minerActive) return;
+            
+            const hashVal = document.getElementById('hash-val');
+            const progressBar = document.getElementById('miner-progress');
+            
+            hashCount += (Math.random() * 5);
+            hashVal.innerText = hashCount.toFixed(2) + " MH/s";
+            
+            let width = parseFloat(progressBar.style.width) || 0;
+            width += 2;
+            if(width > 100) width = 0;
+            progressBar.style.width = width + '%';
+
+            setTimeout(runMiner, 200);
+        }
+
+        /* --- HACK SEQUENCE --- */
+        function initHackSequence() {
+            if(hackingSequenceActive) return;
+            hackingSequenceActive = true;
+            
+            showToast("INITIATING RAJA BRUTE FORCE ATTACK", "warn");
+            
+            const threatLevel = document.getElementById('threat-level');
+            const steps = [
+                { msg: "RAJA MODS bypassing Firewall...", time: 1000, color: "yellow" },
+                { msg: "Injecting RAJA SQL Payload...", time: 2500, color: "orange" },
+                { msg: "RAJA Root Access Requested...", time: 4000, color: "red" },
+                { msg: "RAJA ACCESS GRANTED. DOWNLOADING DATA...", time: 5500, color: "#0f0" }
+            ];
+
+            steps.forEach(step => {
+                setTimeout(() => {
+                    addToLog(step.msg, step.color === "#0f0" ? "success" : "warn");
+                    if(step.color === "yellow") threatLevel.innerText = "MODERATE";
+                    if(step.color === "orange") threatLevel.innerText = "HIGH";
+                    if(step.color === "red") threatLevel.innerText = "CRITICAL";
+                    if(step.color === "#0f0") {
+                        threatLevel.innerText = "RAJA_BREACHED";
+                        threatLevel.style.color = "#f00";
+                        showToast("TARGET COMPROMISED BY RAJA", "success");
+                        hackingSequenceActive = false;
+                    }
+                }, step.time);
+            });
+        }
+
+        /* --- FILE SYSTEM --- */
+        const files = [
+            { name: "raja_passwords.txt.enc", size: "24KB" },
+            { name: "raja_credit_cards.db", size: "150MB" },
+            { name: "raja_exploit.cpp", size: "12KB" },
+            { name: "raja_config.launch", size: "1KB" }
+        ];
+
+        function initFiles() {
+            const tbody = document.getElementById('file-list');
+            files.forEach(file => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td>${file.name}</td>
+                    <td>${file.size}</td>
+                    <td><button class="action-btn" onclick="downloadFile('${file.name}')">GET</button></td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function downloadFile(name) {
+            showToast(`RAJA Downloading ${name}...`, "info");
+            setTimeout(() => {
+                showToast(`${name} saved to RAJA drive.`, "success");
+                addToLog(`RAJA File exfiltrated: ${name}`, "success");
+            }, 1500);
+        }
+
+        function downloadData() {
+            showToast("RAJA EXFILTRATING ALL DATA...", "warn");
+            setTimeout(() => {
+                showToast("RAJA UPLOAD COMPLETE (100%)", "success");
+                addToLog("RAJA Bulk data transfer complete.", "success");
+            }, 3000);
+        }
+
+        function purgeSystem() {
+            addToLog("RAJA MODS purging logs...", "error");
+            document.getElementById('sys-log').innerHTML = "";
+            showToast("RAJA LOGS PURGED", "error");
+        }
+
+        /* --- TARGET SCANNER --- */
+        function initTargets() {
+            findNewTarget();
+        }
+
+        function findNewTarget() {
+            const list = document.getElementById('target-list');
+            const target = `RAJA_TARGET_${Math.floor(Math.random()*9000)+1000} [${Math.floor(Math.random()*255)}.${Math.floor(Math.random()*255)}.x.x]`;
+            
+            const div = document.createElement('div');
+            div.style.borderBottom = "1px solid #333";
+            div.style.padding = "5px";
+            div.innerHTML = `<span style="color:var(--accent-color)">> ${target}</span> <button style="float:right; background:none; border:1px solid var(--accent-color); color:var(--accent-color); cursor:pointer;" onclick="addToLog('RAJA Attack initiated on ${target}', 'warn')">ATTACK</button>`;
+            
+            list.prepend(div);
+        }
+
+        /* --- TOAST NOTIFICATIONS --- */
+        function showToast(msg, type) {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            toast.style.background = "#000";
+            toast.style.border = `1px solid ${type === 'success' ? '#0f0' : (type === 'warn' ? '#ff9900' : '#f00')}`;
+            toast.style.color = type === 'success' ? '#0f0' : (type === 'warn' ? '#ff9900' : '#f00');
+            toast.style.padding = "10px 20px";
+            toast.style.boxShadow = "0 0 10px rgba(0,0,0,0.5)";
+            toast.style.fontFamily = "var(--font-main)";
+            toast.innerText = `[RAJA_${type.toUpperCase()}] ${msg}`;
+            
+            container.appendChild(toast);
+            
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                setTimeout(() => toast.remove(), 500);
+            }, 3000);
+        }
+
+        /* --- CANVAS NETWORK ANIMATION --- */
+        let canvas, ctx, w, h;
+        let nodes = [];
+        
+        function resizeCanvas() {
+            canvas = document.getElementById('networkCanvas');
+            ctx = canvas.getContext('2d');
+            w = canvas.width = canvas.parentElement.offsetWidth;
+            h = canvas.height = canvas.parentElement.offsetHeight;
+        }
+
+        function initNetworkCanvas() {
+            resizeCanvas();
+            for(let i=0; i<30; i++) {
+                nodes.push({
+                    x: Math.random() * w,
+                    y: Math.random() * h,
+                    vx: (Math.random() - 0.5) * 2,
+                    vy: (Math.random() - 0.5) * 2
+                });
+            }
+            animateNetwork();
+        }
+
+        function animateNetwork() {
+            if(document.getElementById('network').style.display === 'none') {
+                requestAnimationFrame(animateNetwork);
+                return;
+            }
+            
+            ctx.clearRect(0, 0, w, h);
+            
+            // Draw Nodes
+            ctx.fillStyle = '#ff9900';
+            nodes.forEach((node, i) => {
+                node.x += node.vx;
+                node.y += node.vy;
+                
+                // Bounce
+                if(node.x < 0 || node.x > w) node.vx *= -1;
+                if(node.y < 0 || node.y > h) node.vy *= -1;
+                
+                ctx.beginPath();
+                ctx.arc(node.x, node.y, 3, 0, Math.PI*2);
+                ctx.fill();
+                
+                // Connect
+                for(let j=i+1; j<nodes.length; j++) {
+                    const dx = nodes[j].x - node.x;
+                    const dy = nodes[j].y - node.y;
+                    const dist = Math.sqrt(dx*dx + dy*dy);
+                    
+                    if(dist < 100) {
+                        ctx.beginPath();
+                        ctx.strokeStyle = `rgba(255, 153, 0, ${1 - dist/100})`;
+                        ctx.lineWidth = 0.5;
+                        ctx.moveTo(node.x, node.y);
+                        ctx.lineTo(nodes[j].x, nodes[j].y);
+                        ctx.stroke();
+                    }
+                }
+            });
+            
+            requestAnimationFrame(animateNetwork);
+        }
+
+    </script>
+</body>
+</html>
